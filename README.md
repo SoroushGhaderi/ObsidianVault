@@ -31,7 +31,7 @@ claude                        # reads CLAUDE.md → SCHEMA.md automatically
 # Open llm/chatui-prompt.md, copy the prompt block, paste + your pages
 ```
 
-All file-aware agents can use `skills/manage-wiki-vault/SKILL.md`. The skill is agent-neutral; `llm/SCHEMA.md` remains the authoritative vault contract.
+Agent skills are installed and maintained globally, outside this vault. The vault-local `llm/SCHEMA.md` remains the authoritative contract for its structure and content.
 
 ## Common commands
 
