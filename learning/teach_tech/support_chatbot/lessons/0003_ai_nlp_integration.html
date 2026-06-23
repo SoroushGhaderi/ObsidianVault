@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 3: AI/NLP Integration for Chatbot Intelligence</title>
+    <link rel="stylesheet" href="../assets/lesson_style.css">
+</head>
+<body>
+    <h1>Lesson 3: AI/NLP Integration for Chatbot Intelligence</h1>
+    
+    <div class="goal">
+        <strong>Goal:</strong> Learn how to integrate language models and retrieval systems for intelligent chatbot responses.
+    </div>
+    
+    <h2>Concept Explanation</h2>
+    <p>Modern chatbots use three AI layers:</p>
+    <ol>
+        <li><strong>Language Model (LLM):</strong> Generates human-like responses (OpenAI, Ollama, local models).</li>
+        <li><strong>Retrieval-Augmented Generation (RAG):</strong> Fetches relevant knowledge from documents/FAQs.</li>
+        <li><strong>Conversation Memory:</strong> Maintains context across messages and sessions.</li>
+    </ol>
+    
+    <p><strong>Key components:</strong></p>
+    <ul>
+        <li><strong>Prompt Engineering:</strong> Structured prompts with system instructions, context, and user input.</li>
+        <li><strong>Vector Database:</strong> Stores document embeddings for semantic search (pgvector, Pinecone).</li>
+        <li><strong>Streaming:</strong> Token-by-token response delivery for perceived performance.</li>
+        <li><strong>Function Calling:</strong> LLM can call external tools (search, calculations, APIs).</li>
+    </ul>
+    
+    <p><strong>Architecture patterns:</strong></p>
+    <ul>
+        <li><strong>Orchestrator Pattern:</strong> AI service coordinates LLM, retrieval, and memory.</li>
+        <li><strong>Pipeline Pattern:</strong> Sequential processing: query rewriting → retrieval → generation.</li>
+        <li><strong>Agent Pattern:</strong> LLM decides which tools to use dynamically.</li>
+    </ul>
+    
+    <h2>Worked Example</h2>
+    <p><strong>RAG pipeline for support chatbot:</strong></p>
+    
+    <pre><code>class SupportChatAI:
+    def __init__(self, llm, vector_store, memory):
+        self.llm = llm
+        self.vector_store = vector_store
+        self.memory = memory
+    
+    async def generate_response(self, user_message, session_id):
+        # 1. Retrieve conversation context
+        history = await self.memory.get_history(session_id)
+        
+        # 2. Rewrite query for better retrieval
+        rewritten = await self.llm.generate(
+            f"Rewrite this support question for knowledge base search: {user_message}"
+        )
+        
+        # 3. Retrieve relevant documents
+        docs = await self.vector_store.search(rewritten, top_k=3)
+        
+        # 4. Generate response with context
+        prompt = self._build_prompt(user_message, docs, history)
+        response = await self.llm.generate_stream(prompt)
+        
+        # 5. Store in memory
+        await self.memory.add_message(session_id, user_message, response)
+        
+        return response
+    
+    def _build_prompt(self, message, docs, history):
+        return f"""You are a helpful support chatbot. Answer based on the provided documentation.
+
+Documentation:
+{chr(10).join([doc.content for doc in docs])}
+
+Conversation history:
+{self._format_history(history)}
+
+User question: {message}
+
+Answer:"""</code></pre>
+    
+    <p><strong>Streaming implementation:</strong></p>
+    
+    <pre><code>// Backend SSE endpoint
+app.get('/chat/stream', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
+  const stream = await ai.generateResponse(req.query.message);
+  stream.on('data', (chunk) => {
+    res.write(`data: ${JSON.stringify({ token: chunk })}\n\n`);
+  });
+  stream.on('end', () => {
+    res.write('data: [DONE]\n\n');
+    res.end();
+  });
+});</code></pre>
+    
+    <div class="exercise">
+        <h3>Exercise</h3>
+        <p>Design a support chatbot AI system that:</p>
+        <ol>
+            <li>Handles multi-turn conversations with context.</li>
+            <li>Retrieves from a knowledge base of 10,000 support articles.</li>
+            <li>Streams responses token-by-token.</li>
+            <li>Falls back to generic responses when knowledge base has no relevant info.</li>
+        </ol>
+        <p>Define the data flow, prompt structure, and error handling.</p>
+    </div>
+    
+    <div class="feedback">
+        <details>
+            <summary>Answer Key</summary>
+            <p><strong>Data flow:</strong></p>
+            <ol>
+                <li>User message → Query rewriting (LLM)</li>
+                <li>Rewritten query → Vector search (top 5 results with scores)</li>
+                <li>Results below threshold → Fallback response generation</li>
+                <li>Results above threshold → Context-augmented prompt</li>
+                <li>Prompt → LLM streaming → Token buffer → SSE to client</li>
+                <li>Complete response → Memory storage (async)</li>
+            </ol>
+            <p><strong>Prompt structure:</strong></p>
+            <pre>System: You are a support assistant. Use ONLY the provided documentation. If unsure, say "I don't have that information."
+
+Context from knowledge base:
+[Article 1: Title - Content]
+[Article 2: Title - Content]
+
+Conversation:
+[User]: Previous question
+[Assistant]: Previous answer
+
+[User]: Current question</pre>
+            <p><strong>Error handling:</strong></p>
+            <ul>
+                <li>Vector search timeout → Use cached results or generic response</li>
+                <li>LLM timeout → Return partial response with apology</li>
+                <li>Memory failure → Continue without history (stateless)</li>
+                <li>Rate limiting → Queue with position indicator</li>
+            </ul>
+        </details>
+    </div>
+    
+    <h2>Primary Sources</h2>
+    <ul>
+        <li><a href="https://www.learnwithparam.com/blog/system-design-building-production-ready-ai-chatbot-end-to-end">Production AI chatbot system design</a></li>
+        <li><a href="https://www.pinecone.io/learn/retrieval-augmented-generation/">RAG Architecture Guide</a></li>
+    </ul>
+    
+    <h2>Related Reference Documents</h2>
+    <ul>
+        <li><a href="../reference/rag_pipeline.html">RAG Pipeline Reference</a></li>
+        <li><a href="../reference/event_driven_patterns.html">Event-Driven Patterns Reference</a></li>
+    </ul>
+    
+    <div class="follow-up">
+        <p><strong>Follow-up:</strong> Ask about prompt engineering techniques or vector database optimization.</p>
+    </div>
+    
+    <script src="../assets/quiz.js"></script>
+</body>
+</html>

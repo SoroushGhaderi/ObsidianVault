@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 4: Deployment and Scaling Strategies</title>
+    <link rel="stylesheet" href="../assets/lesson_style.css">
+</head>
+<body>
+    <h1>Lesson 4: Deployment and Scaling Strategies</h1>
+    
+    <div class="goal">
+        <strong>Goal:</strong> Learn how to deploy and scale chatbot backend services.
+    </div>
+    
+    <h2>Concept Explanation</h2>
+    <p>Deployment has two parts:</p>
+    <ol>
+        <li><strong>Client Distribution:</strong> Packaging, updates, and platform compatibility (if applicable).</li>
+        <li><strong>Backend Scaling:</strong> Handling concurrent users, AI workloads, and data storage.</li>
+    </ol>
+    
+    <p><strong>Backend scaling:</strong></p>
+    <ul>
+        <li><strong>Horizontal scaling:</strong> Add more service instances behind load balancer.</li>
+        <li><strong>Containerization:</strong> Docker + Kubernetes for orchestration.</li>
+        <li><strong>Serverless:</strong> AWS Lambda, Cloud Functions for event-driven workloads.</li>
+        <li><strong>Database scaling:</strong> Read replicas, connection pooling, caching.</li>
+    </ul>
+    
+    <p><strong>AI-specific scaling:</strong></p>
+    <ul>
+        <li><strong>LLM provider scaling:</strong> Multiple API keys, rate limit management.</li>
+        <li><strong>Vector database scaling:</strong> Sharding, indexing optimization.</li>
+        <li><strong>Cache layer:</strong> Redis for frequent queries and session data.</li>
+    </ul>
+    
+    <h2>Worked Example</h2>
+    <p><strong>Kubernetes deployment for backend:</strong></p>
+    
+    <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: chat-service
+  template:
+    metadata:
+      labels:
+        app: chat-service
+    spec:
+      containers:
+      - name: chat
+        image: chat-service:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: url
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10</code></pre>
+    
+    <p><strong>Auto-scaling configuration:</strong></p>
+    
+    <pre><code>apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: chat-service-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: chat-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70</code></pre>
+    
+    <div class="exercise">
+        <h3>Exercise</h3>
+        <p>Design a deployment strategy for a chatbot that:</p>
+        <ol>
+            <li>Supports 10,000 concurrent users.</li>
+            <li>Handles AI response generation with &lt;200ms latency.</li>
+            <li>Scales automatically during peak hours.</li>
+            <li>Provides zero-downtime deployments.</li>
+        </ol>
+        <p>Define the infrastructure, scaling policies, and monitoring.</p>
+    </div>
+    
+    <div class="feedback">
+        <details>
+            <summary>Answer Key</summary>
+            <p><strong>Infrastructure:</strong></p>
+            <ul>
+                <li><strong>Backend:</strong> Kubernetes cluster with 3 node pools:
+                    <ul>
+                        <li>Chat service: 3-10 replicas (CPU-based scaling)</li>
+                        <li>AI service: 2-8 replicas (GPU-based scaling for local models)</li>
+                        <li>API gateway: 2-4 replicas (request-based scaling)</li>
+                    </ul>
+                </li>
+                <li><strong>Data:</strong> PostgreSQL (primary + 2 read replicas), Redis cluster (3 nodes)</li>
+                <li><strong>AI:</strong> Multiple LLM provider keys with circuit breaker fallback</li>
+            </ul>
+            <p><strong>Scaling policies:</strong></p>
+            <ul>
+                <li>Chat service: Scale up when CPU &gt;70% or request latency &gt;100ms</li>
+                <li>AI service: Scale up when queue depth &gt;100 or response latency &gt;500ms</li>
+                <li>Database: Read replicas when read CPU &gt;60%, connection pooling with PgBouncer</li>
+            </ul>
+            <p><strong>Monitoring:</strong></p>
+            <ul>
+                <li>Prometheus metrics: request rate, error rate, latency percentiles</li>
+                <li>Grafana dashboards: System health, AI performance, user engagement</li>
+                <li>Alerting: PagerDuty for critical issues, Slack for warnings</li>
+            </ul>
+            <p><strong>Zero-downtime deployments:</strong></p>
+            <ul>
+                <li>Rolling updates with max surge 1, max unavailable 0</li>
+                <li>Health checks with graceful shutdown</li>
+                <li>Database migrations with backward compatibility</li>
+            </ul>
+        </details>
+    </div>
+    
+    <h2>Primary Sources</h2>
+    <ul>
+        <li><a href="https://kubernetes.io/docs/home/">Kubernetes Documentation</a></li>
+        <li><a href="https://www.learnwithparam.com/blog/system-design-building-production-ready-ai-chatbot-end-to-end">Production AI chatbot system design</a></li>
+    </ul>
+    
+    <h2>Related Reference Documents</h2>
+    <ul>
+        <li><a href="../reference/deployment_checklist.html">Deployment Checklist</a></li>
+        <li><a href="../reference/event_driven_patterns.html">Event-Driven Patterns Reference</a></li>
+    </ul>
+    
+    <div class="follow-up">
+        <p><strong>Follow-up:</strong> Ask about specific cloud providers, CI/CD pipelines, or monitoring setups.</p>
+    </div>
+    
+    <script src="../assets/quiz.js"></script>
+</body>
+</html>

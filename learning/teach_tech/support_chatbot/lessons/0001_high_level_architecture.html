@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 1: High-Level Architecture of a Support Chatbot System</title>
+    <link rel="stylesheet" href="../assets/lesson_style.css">
+</head>
+<body>
+    <h1>Lesson 1: High-Level Architecture of a Support Chatbot System</h1>
+    
+    <div class="goal">
+        <strong>Goal:</strong> Understand the core components and communication patterns of a support chatbot system.
+    </div>
+    
+    <h2>Concept Explanation</h2>
+    <p>A support chatbot system typically consists of three main layers:</p>
+    
+    <ol>
+        <li><strong>Client Layer:</strong> The user interface (web, mobile, or desktop) that handles user interaction.</li>
+        <li><strong>Backend Services Layer:</strong> APIs, authentication, message routing, and business logic. Can be monolithic or microservices.</li>
+        <li><strong>AI/NLP Layer:</strong> Language models, retrieval-augmented generation (RAG), conversation memory, and response generation.</li>
+    </ol>
+    
+    <p>These layers communicate via:</p>
+    <ul>
+        <li><strong>HTTP/WebSocket</strong> between client and backend.</li>
+        <li><strong>Event-driven messaging</strong> (Kafka, RabbitMQ) between backend services for scalability.</li>
+        <li><strong>Internal APIs</strong> between microservices.</li>
+    </ul>
+    
+    <h2>Worked Example</h2>
+    <p>Consider a simplified architecture:</p>
+    
+    <div class="diagram">
+Backend Services
+├── API Gateway (Auth, rate limiting)
+├── Chat Service (Session management, message routing)
+├── AI Service (LLM orchestration, RAG)
+├── User Service (Profiles, preferences)
+└── Analytics Service (Logging, metrics)
+
+AI/NLP Components
+├── LLM Provider (OpenAI, Ollama)
+├── Vector Database (pgvector, Pinecone)
+└── Knowledge Base (docs, FAQs)
+
+Data Stores
+├── SQL Database (PostgreSQL)
+└── Cache (Redis)
+    </div>
+    
+    <p><strong>Data flow for a user message:</strong></p>
+    <ol>
+        <li>User sends message via client interface.</li>
+        <li>API Gateway authenticates and routes to Chat Service.</li>
+        <li>Chat Service stores message, triggers AI Service.</li>
+        <li>AI Service generates response using LLM, streams tokens back.</li>
+        <li>Response flows back through the same path to client.</li>
+    </ol>
+    
+    <div class="exercise">
+        <h3>Exercise</h3>
+        <p>Draw a simple diagram showing the communication paths between:</p>
+        <ul>
+            <li>Client interface</li>
+            <li>Backend API Gateway</li>
+            <li>Chat Service</li>
+            <li>AI Service</li>
+            <li>Database</li>
+        </ul>
+        <p>Identify which protocols you would use for each connection (HTTP, WebSocket, event queue, internal API).</p>
+    </div>
+    
+    <div class="feedback">
+        <details>
+            <summary>Answer Key</summary>
+            <p><strong>Client ↔ API Gateway:</strong> HTTPS for commands, WebSocket for real-time streaming</p>
+            <p><strong>API Gateway ↔ Chat Service:</strong> Internal REST/gRPC API</p>
+            <p><strong>Chat Service ↔ AI Service:</strong> Event queue (Kafka) for async processing, or gRPC for sync</p>
+            <p><strong>AI Service ↔ LLM Provider:</strong> HTTPS API calls</p>
+            <p><strong>Chat Service ↔ Database:</strong> SQL connection for persistence</p>
+            <p><strong>AI Service ↔ Vector DB:</strong> Database connection for similarity search</p>
+            <p>Key insight: Use WebSocket for real-time streaming of AI responses to maintain low latency.</p>
+        </details>
+    </div>
+    
+    <h2>Primary Sources</h2>
+    <ul>
+        <li><a href="https://www.learnwithparam.com/blog/system-design-building-production-ready-ai-chatbot-end-to-end">Production AI chatbot system design</a></li>
+        <li><a href="https://www.nadcab.com/blog/ai-chatbot-architecture-guide">AI Chatbot Architecture Guide</a></li>
+    </ul>
+    
+    <h2>Related Reference Documents</h2>
+    <ul>
+        <li><a href="../reference/event_driven_patterns.html">Event-Driven Patterns Reference</a></li>
+        <li><a href="../reference/rag_pipeline.html">RAG Pipeline Reference</a></li>
+    </ul>
+    
+    <div class="follow-up">
+        <p><strong>Follow-up:</strong> Ask questions about any component or request deeper dives into specific layers.</p>
+    </div>
+    
+    <script src="../assets/quiz.js"></script>
+</body>
+</html>

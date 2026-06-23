@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 2: Event-Driven Backend for Scalable Chatbots</title>
+    <link rel="stylesheet" href="../assets/lesson_style.css">
+</head>
+<body>
+    <h1>Lesson 2: Event-Driven Backend for Scalable Chatbots</h1>
+    
+    <div class="goal">
+        <strong>Goal:</strong> Understand how event-driven architecture enables scalable, real-time chatbot systems.
+    </div>
+    
+    <h2>Concept Explanation</h2>
+    <p>Traditional request-response architectures block resources while waiting for LLM responses (which can take seconds). Event-driven architecture (EDA) decouples components, allowing asynchronous processing.</p>
+    
+    <p><strong>Core patterns:</strong></p>
+    <ol>
+        <li><strong>Message Queues:</strong> Kafka, RabbitMQ, SQS for reliable message delivery.</li>
+        <li><strong>Event Streaming:</strong> Real-time token-by-token response delivery.</li>
+        <li><strong>CQRS:</strong> Separate read/write models for chat history and AI processing.</li>
+        <li><strong>Saga Pattern:</strong> Orchestrate multi-step workflows (message → AI → response → storage).</li>
+    </ol>
+    
+    <p><strong>Benefits for chatbots:</strong></p>
+    <ul>
+        <li><strong>Scalability:</strong> Independent scaling of chat, AI, and storage services.</li>
+        <li><strong>Resilience:</strong> Queue messages during AI service downtime.</li>
+        <li><strong>Real-time:</strong> Stream responses without blocking UI.</li>
+        <li><strong>Auditability:</strong> Event sourcing provides complete conversation history.</li>
+    </ul>
+    
+    <h2>Worked Example</h2>
+    <p><strong>Simplified event-driven chat flow:</strong></p>
+    
+    <div class="diagram">
+Client → 1. Send message → Gateway
+Gateway → 2. Publish MessageSent → Kafka
+ChatService → 3. Subscribe MessageSent → Kafka
+ChatService → 4. Store message → DB
+ChatService → 5. Publish AIRequest → Kafka
+AIService → 6. Subscribe AIRequest → Kafka
+AIService → 7. Call LLM → LLMProvider
+AIService → 8. Publish AIResponse → Kafka
+ChatService → 9. Subscribe AIResponse → Kafka
+ChatService → 10. Stream to client → WebSocket
+    </div>
+    
+    <p><strong>Kafka topics:</strong></p>
+    <ul>
+        <li><code>chat.message.sent</code> - User messages</li>
+        <li><code>chat.ai.request</code> - AI processing requests</li>
+        <li><code>chat.ai.response</code> - AI streaming responses</li>
+        <li><code>chat.system.notification</code> - Typing indicators, errors</li>
+    </ul>
+    
+    <p><strong>Code sketch (Node.js with KafkaJS):</strong></p>
+    
+    <pre><code>// Producer (Chat Service)
+await producer.send({
+  topic: 'chat.message.sent',
+  messages: [{ value: JSON.stringify({ messageId, userId, content, timestamp }) }]
+});
+
+// Consumer (AI Service)
+consumer.subscribe({ topic: 'chat.ai.request', fromBeginning: false });
+consumer.run({
+  eachMessage: async ({ message }) => {
+    const request = JSON.parse(message.value);
+    const stream = await llmProvider.generateStream(request.prompt);
+    for await (const chunk of stream) {
+      await producer.send({
+        topic: 'chat.ai.response',
+        messages: [{ value: JSON.stringify({ messageId: request.messageId, token: chunk }) }]
+      });
+    }
+  }
+});</code></pre>
+    
+    <div class="exercise">
+        <h3>Exercise</h3>
+        <p>Design a Kafka-based event system for a chatbot that supports:</p>
+        <ol>
+            <li>Multiple concurrent users with session isolation.</li>
+            <li>Streaming AI responses with backpressure handling.</li>
+            <li>Fallback to secondary AI provider on failure.</li>
+            <li>Rate limiting per user.</li>
+        </ol>
+        <p>Define the topics, consumer groups, and error handling strategy.</p>
+    </div>
+    
+    <div class="feedback">
+        <details>
+            <summary>Answer Key</summary>
+            <p><strong>Topics:</strong></p>
+            <ul>
+                <li><code>chat.message.sent.{userId}</code> - Partitioned by user for ordering</li>
+                <li><code>chat.ai.request.{priority}</code> - Separate topics for normal/high priority</li>
+                <li><code>chat.ai.response.{messageId}</code> - Response streaming per message</li>
+                <li><code>chat.system.dead-letter</code> - Failed messages for retry</li>
+            </ul>
+            <p><strong>Consumer groups:</strong></p>
+            <ul>
+                <li><code>chat-service-group</code> - Handles message storage and routing</li>
+                <li><code>ai-service-group</code> - Processes AI requests (multiple instances)</li>
+                <li><code>analytics-group</code> - Logs all events for monitoring</li>
+            </ul>
+            <p><strong>Backpressure:</strong> Use Kafka consumer lag monitoring; scale AI service instances based on lag.</p>
+            <p><strong>Fallback:</strong> Implement circuit breaker pattern; on AI provider failure, publish to fallback topic with different consumer.</p>
+            <p><strong>Rate limiting:</strong> Use Redis sliding window; check before publishing to AI request topic.</p>
+        </details>
+    </div>
+    
+    <h2>Primary Sources</h2>
+    <ul>
+        <li><a href="https://www.learnwithparam.com/blog/system-design-building-production-ready-ai-chatbot-end-to-end">Production AI chatbot system design</a></li>
+        <li><a href="https://chatspark.io/blog/event-driven-architecture-for-chatbot-apis">Event-Driven Architecture for Chatbot APIs</a></li>
+    </ul>
+    
+    <h2>Related Reference Documents</h2>
+    <ul>
+        <li><a href="../reference/event_driven_patterns.html">Event-Driven Patterns Reference</a></li>
+        <li><a href="../reference/rag_pipeline.html">RAG Pipeline Reference</a></li>
+    </ul>
+    
+    <div class="follow-up">
+        <p><strong>Follow-up:</strong> Ask about specific message broker implementations or saga orchestration patterns.</p>
+    </div>
+    
+    <script src="../assets/quiz.js"></script>
+</body>
+</html>

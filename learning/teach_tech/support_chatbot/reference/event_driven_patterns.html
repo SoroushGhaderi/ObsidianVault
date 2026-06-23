@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event-Driven Patterns Reference</title>
+    <link rel="stylesheet" href="../assets/lesson_style.css">
+</head>
+<body>
+    <h1>Event-Driven Patterns Reference</h1>
+    
+    <h2>Message Broker Comparison</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Broker</th>
+                <th>Use Case</th>
+                <th>Throughput</th>
+                <th>Latency</th>
+                <th>Persistence</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Kafka</strong></td>
+                <td>High-throughput event streaming</td>
+                <td>100K+ msg/sec</td>
+                <td>ms</td>
+                <td>Disk (durable)</td>
+            </tr>
+            <tr>
+                <td><strong>RabbitMQ</strong></td>
+                <td>Complex routing, task queues</td>
+                <td>10K msg/sec</td>
+                <td>μs</td>
+                <td>Memory/Disk</td>
+            </tr>
+            <tr>
+                <td><strong>AWS SQS</strong></td>
+                <td>Managed queue, simple use cases</td>
+                <td>3K msg/sec</td>
+                <td>100ms</td>
+                <td>Disk</td>
+            </tr>
+            <tr>
+                <td><strong>Redis Streams</strong></td>
+                <td>Lightweight, in-memory</td>
+                <td>1M+ msg/sec</td>
+                <td>μs</td>
+                <td>Memory (AOF)</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h2>Kafka Topics Design for Chatbots</h2>
+    <pre># Core topics
+chat.message.sent.{userId}          # User messages (partitioned by user)
+chat.ai.request.{priority}          # AI processing requests
+chat.ai.response.{messageId}        # AI streaming responses
+chat.system.notification            # Typing indicators, errors
+
+# Supporting topics
+chat.user.activity                  # User online/offline events
+chat.analytics.events               # All events for analytics
+chat.system.audit                   # Security audit trail
+chat.system.dead-letter             # Failed messages for retry</pre>
+    
+    <h2>Consumer Group Patterns</h2>
+    
+    <h3>Chat Service Group</h3>
+    <pre>// Handles message storage and routing
+consumer.subscribe({ topics: ['chat.message.sent', 'chat.ai.response'] });
+consumer.run({
+  eachMessage: async ({ topic, message }) => {
+    if (topic === 'chat.message.sent') {
+      await storeMessage(message);
+      await forwardToAI(message);
+    } else if (topic === 'chat.ai.response') {
+      await streamToClient(message);
+    }
+  }
+});</pre>
+    
+    <h3>AI Service Group</h3>
+    <pre>// Processes AI requests (multiple instances)
+consumer.subscribe({ topic: 'chat.ai.request' });
+consumer.run({
+  eachMessage: async ({ message }) => {
+    const request = JSON.parse(message.value);
+    const stream = await generateAIResponse(request);
+    for await (const chunk of stream) {
+      await publishResponse(request.messageId, chunk);
+    }
+  }
+});</pre>
+    
+    <h2>Error Handling Patterns</h2>
+    
+    <h3>Dead Letter Queue</h3>
+    <pre>consumer.run({
+  eachMessage: async ({ message }) => {
+    try {
+      await processMessage(message);
+    } catch (error) {
+      if (message.headers.attempts &lt; 3) {
+        // Retry with exponential backoff
+        await retryWithBackoff(message);
+      } else {
+        // Send to dead letter queue
+        await producer.send({
+          topic: 'chat.system.dead-letter',
+          messages: [{ value: message.value, headers: { error: error.message } }]
+        });
+      }
+    }
+  }
+});</pre>
+    
+    <h3>Circuit Breaker</h3>
+    <pre>class CircuitBreaker {
+  constructor(fn, options = {}) {
+    this.fn = fn;
+    this.failureThreshold = options.failureThreshold || 5;
+    this.resetTimeout = options.resetTimeout || 30000;
+    this.failures = 0;
+    this.state = 'CLOSED';
+  }
+  
+  async call(...args) {
+    if (this.state === 'OPEN') {
+      if (Date.now() &gt; this.nextAttempt) {
+        this.state = 'HALF';
+      } else {
+        throw new Error('Circuit breaker is OPEN');
+      }
+    }
+    
+    try {
+      const result = await this.fn(...args);
+      this.reset();
+      return result;
+    } catch (error) {
+      this.failures++;
+      if (this.failures &gt;= this.failureThreshold) {
+        this.state = 'OPEN';
+        this.nextAttempt = Date.now() + this.resetTimeout;
+      }
+      throw error;
+    }
+  }
+  
+  reset() {
+    this.failures = 0;
+    this.state = 'CLOSED';
+  }
+}</pre>
+    
+    <h2>Performance Optimization</h2>
+    <ul>
+        <li><strong>Batch publishing:</strong> Send multiple messages in one Kafka produce call.</li>
+        <li><strong>Compression:</strong> Use gzip/snappy for large messages.</li>
+        <li><strong>Partitioning:</strong> Ensure even distribution across partitions.</li>
+        <li><strong>Consumer parallelism:</strong> Multiple consumer instances per group.</li>
+        <li><strong>Memory management:</strong> Use streaming for large payloads.</li>
+    </ul>
+    
+    <h2>Monitoring Metrics</h2>
+    <ul>
+        <li><strong>Consumer lag:</strong> Messages pending per partition.</li>
+        <li><strong>Throughput:</strong> Messages per second per topic.</li>
+        <li><strong>Latency:</strong> End-to-end message delivery time.</li>
+        <li><strong>Error rate:</strong> Failed messages per consumer group.</li>
+        <li><strong>Circuit breaker state:</strong> OPEN/CLOSED/HALF.</li>
+    </ul>
+    
+    <div class="follow-up">
+        <p><strong>Related Lessons:</strong></p>
+        <ul>
+            <li><a href="../lessons/0002_event_driven_backend.html">Lesson 2: Event-Driven Backend</a></li>
+            <li><a href="../lessons/0003_ai_nlp_integration.html">Lesson 3: AI/NLP Integration</a></li>
+        </ul>
+    </div>
+</body>
+</html>
