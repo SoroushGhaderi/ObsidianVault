@@ -1,0 +1,3 @@
+Read llm/SCHEMA.md before any wiki task. Follow House Style exactly.
+Never modify raw/. Use [[wikilinks]] for all internal references.
+Log every operation to log/YYYY-MM.md.

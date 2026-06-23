@@ -1,0 +1,7 @@
+{
+  "readableLineLength": true,
+  "showFrontmatter": false,
+  "newLinkFormat": "shortest",
+  "useMarkdownLinks": false,
+  "attachmentFolderPath": "raw/assets"
+}

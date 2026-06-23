@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage Wiki Vault"
+  short_description: "Operate a structured, agent-assisted knowledge vault"
+  default_prompt: "Use $manage-wiki-vault to review my vault and perform the requested ingest, query, decision, or maintenance task."
