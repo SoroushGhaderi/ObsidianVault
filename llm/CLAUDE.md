@@ -1,7 +1,9 @@
-# Claude Code
+# Shared Claude Code Instructions
 
 Read `llm/SCHEMA.md` fully before acting. It is the complete operating manual.
 
-**Session start:** read `wiki/index.md` tail of `log/` most recent file → report last operation and page count → ask what to work on.
+**Session start:** read `wiki/index.md`, the most recent `log/YYYY-MM.md` when one exists, and Git status.
 
 **Tip:** use `TodoWrite` for multi-file ingests. Commit after every ingest session.
+
+Agent skills are installed globally. Do not create or maintain skill implementations inside this vault.

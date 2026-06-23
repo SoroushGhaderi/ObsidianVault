@@ -1,9 +1,9 @@
 # Wiki Vault Resources
 
 ## Knowledge
-- [Local vault schema](/Users/soroush/Downloads/vault/llm/SCHEMA.md)
+- [Local vault schema](../../../llm/SCHEMA.md)
   Use for: authoritative layout, frontmatter, house style, and operations.
-- [Local vault guide](/Users/soroush/Downloads/vault/README.md)
+- [Local vault guide](../../../README.md)
   Use for: daily workflow and current vault structure.
 - [Karpathy: A simple personal knowledge system](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
   Use for: the design inspiration cited by the vault.

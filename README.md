@@ -17,6 +17,8 @@ wiki/       LLM writes here. You read here.
 journal/    You write here (YYYY-MM.md, free-form). LLM reads.
 log/        LLM appends here. Auto-created monthly.
 llm/        Schema + agent configs.
+learning/   Stateful lesson workspaces and reusable learning material.
+commands/   Vault maintenance helpers.
 ```
 
 One flat wiki, no work/personal split. Use `tags: [work]` or `tags: [personal]`.
@@ -25,10 +27,13 @@ One flat wiki, no work/personal split. Use `tags: [work]` or `tags: [personal]`.
 
 ```bash
 # Claude Code
-claude                        # reads CLAUDE.md → SCHEMA.md automatically
+claude                        # reads root CLAUDE.md → llm/SCHEMA.md
+
+# Codex
+# Reads root AGENTS.md → llm/SCHEMA.md
 
 # Any chat UI
-# Open llm/chatui-prompt.md, copy the prompt block, paste + your pages
+# Open llm/chatui_prompt.md, copy the prompt block, paste + your pages
 ```
 
 Agent skills are installed and maintained globally, outside this vault. The vault-local `llm/SCHEMA.md` remains the authoritative contract for its structure and content.

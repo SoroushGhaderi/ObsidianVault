@@ -27,10 +27,10 @@ echo ""
 # 2. Stubs (< 8 lines)
 echo "Stub pages (< 8 lines):"
 STUBS=0
-find wiki/ -name "*.md" ! -name "index*" ! -name "decisions*" ! -name "README*" | while read -r f; do
+while IFS= read -r f; do
   lines=$(wc -l < "$f")
   [[ $lines -lt 8 ]] && echo "  $f ($lines lines)" && STUBS=$((STUBS+1))
-done
+done < <(find wiki/ -name "*.md" ! -name "index*" ! -name "decisions*" ! -name "README*")
 [[ $STUBS -eq 0 ]] && echo "  none"
 
 echo ""

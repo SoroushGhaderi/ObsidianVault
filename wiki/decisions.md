@@ -4,4 +4,4 @@ Append-only. One row per decision. Status: Pending → Accepted / Dropped / Revi
 
 | Date | Decision | Reasoning | Status |
 |---|---|---|---|
-| setup | Vault initialized | — | Accepted |
+| 2026-05-29 | Vault initialized | — | Accepted |

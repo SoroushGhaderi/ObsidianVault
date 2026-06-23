@@ -26,13 +26,12 @@ Switching mid-session means the same source page gets partially written by two m
 
 | Task | Best choice | Reason |
 |---|---|---|
-| Ingest (single source) | Claude Sonnet / GPT-4o | Reliable structure-following |
-| Batch ingest (5+ sources) | Gemini 2.5 Pro | Large context, cost efficient |
-| Lint pass | Claude Opus / o3 | Best at cross-page reasoning |
-| Journal extract → wiki | Any | Low-stakes task |
-| Logic note writing | Claude Opus / o3 | Needs nuanced reasoning |
-| Quick query / standup | Any fast model | GPT-4o-mini, Gemini Flash |
-| Standup generation | Any fast model | Simple extraction |
+| Ingest (single source) | A capable instruction-following model | Must reliably follow the schema |
+| Batch ingest (5+ sources) | A model with sufficient context | Must compare sources consistently |
+| Lint pass | A strong reasoning model | Must detect cross-page conflicts |
+| Journal extract → wiki | Any schema-compliant model | Low-risk proposal task |
+| Logic note writing | A strong reasoning model | Requires nuanced trade-off analysis |
+| Quick query / standup | A fast schema-compliant model | Simple retrieval and extraction |
 
 ---
 
@@ -54,10 +53,10 @@ If yes to #3 or #4 → edit before committing, or ask the writer model to fix it
 
 | Agent | Config file | Start command |
 |---|---|---|
-| Claude Code | `llm/CLAUDE.md` | `claude` in vault root |
-| OpenAI Codex | `llm/AGENTS.md` | Codex reads AGENTS.md auto |
-| Gemini CLI | paste `llm/chatui-prompt.md` | — |
+| Claude Code | `CLAUDE.md` | `claude` in vault root |
+| OpenAI Codex | `AGENTS.md` | Codex reads `AGENTS.md` automatically |
+| Gemini CLI | paste `llm/chatui_prompt.md` | — |
 | Cursor | `.cursorrules` | open vault in Cursor |
-| Any chat UI | `llm/chatui-prompt.md` | copy-paste the block |
+| Any chat UI | `llm/chatui_prompt.md` | copy-paste the block |
 
 All read `llm/SCHEMA.md` as the source of truth.

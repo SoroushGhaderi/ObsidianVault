@@ -24,6 +24,9 @@ wiki/           ← you write here (flat, one space, tags handle work/personal)
 raw/            ← immutable source files. read; never modify
 journal/        ← YYYY-MM.md free-form captures; no required structure
 log/            ← YYYY-MM.md operation log; auto-created monthly
+learning/       ← stateful lesson workspaces; not part of the durable wiki index
+commands/       ← local maintenance helpers
+llm/            ← vault contract and shared agent guidance
 ```
 
 ## Frontmatter — 3 fields only
@@ -52,6 +55,8 @@ updated: YYYY-MM-DD
 4. Update `wiki/index.md`.
 5. If 5+ pages now share a topic and no hub exists → create `wiki/hubs/[topic].md`.
 6. Append to `log/YYYY-MM.md`: `[YYYY-MM-DD] ingest | [slug] | pages: N`
+
+Generated slugs must use lowercase `snake_case`.
 
 ### QUERY question
 1. Read `wiki/index.md`. For broad topics, read the relevant hub first.

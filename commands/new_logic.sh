@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# new-logic.sh — create a reasoning/design note in wiki/logic/
-# Usage: ./commands/new-logic.sh "slug-name" "what problem this addresses"
+# new_logic.sh — create a reasoning/design note in wiki/logic/
+# Usage: ./commands/new_logic.sh "slug_name" "what problem this addresses"
 # Logic notes capture thinking, trade-offs, and approach — not runnable code.
 set -e
 
@@ -11,11 +11,12 @@ MONTH=$(date +%Y-%m)
 
 [[ ! -f "llm/SCHEMA.md" ]] && echo "Run from vault root" && exit 1
 [[ -z "$SLUG" ]] && echo 'Usage: $0 "slug" "problem description"' && exit 1
+[[ ! "$SLUG" =~ ^[a-z0-9]+(_[a-z0-9]+)*$ ]] \
+  && echo "Slug must use lowercase snake_case: $SLUG" \
+  && exit 1
 
 OUTPUT="wiki/logic/${SLUG}.md"
 [[ -f "$OUTPUT" ]] && echo "Already exists: $OUTPUT" && exit 0
-
-TITLE=$(echo "$SLUG" | tr '-' ' ' | awk '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1))substr($i,2)}print}')
 
 cat > "$OUTPUT" <<NOTE
 ---
@@ -23,8 +24,6 @@ type: logic
 tags: [work]
 updated: $DATE
 ---
-
-# $TITLE
 
 _${PROBLEM}_
 
@@ -45,7 +44,7 @@ echo "[[logic/${SLUG}]] | logic | work" >> wiki/index.md
 
 # Log
 mkdir -p log
-echo "[$DATE] new-logic | $SLUG" >> "log/${MONTH}.md"
+echo "[$DATE] new_logic | $SLUG" >> "log/${MONTH}.md"
 
 echo "✓ Created: $OUTPUT"
 echo "✓ Added to wiki/index.md"

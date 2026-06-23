@@ -12,7 +12,7 @@ Learn to operate the V3 vault confidently, understand why its boundaries exist, 
 - Run linting and distinguish safe automatic fixes from judgment calls.
 
 ## Constraints
-- Use `/Users/soroush/Downloads/vault` as the working Obsidian vault.
+- Use `/Users/soroush/Documents/ObsidianVault` as the working Obsidian vault.
 - Learn through small exercises on the real vault.
 - Preserve raw evidence and avoid automatic Git commits.
 

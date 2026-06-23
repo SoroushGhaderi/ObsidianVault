@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ingest.sh — validate a raw source and print the ingest prompt.
-# Usage: ./commands/ingest.sh raw/work/filename.md
+# Usage: ./commands/ingest.sh raw/filename.md
 set -e
 
 FILE="${1:-}"
@@ -9,7 +9,12 @@ FILE="${1:-}"
 [[ ! -f "$FILE" ]] && echo "File not found: $FILE" && exit 1
 [[ "$FILE" != raw/* ]] && echo "File must be under raw/" && exit 1
 
-SLUG=$(basename "$FILE" .md | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+SLUG=$(basename "$FILE")
+SLUG="${SLUG%.*}"
+SLUG=$(printf '%s' "$SLUG" \
+  | tr '[:upper:]' '[:lower:]' \
+  | sed -E 's/[^a-z0-9]+/_/g; s/^_+//; s/_+$//')
+[[ -z "$SLUG" ]] && echo "Could not derive a valid snake_case slug from: $FILE" && exit 1
 DATE=$(date +%Y-%m-%d)
 
 echo ""

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# git-setup.sh — initialize git for the vault (run once).
-# Usage: ./commands/git-setup.sh [remote-url]
+# git_setup.sh — initialize git for the vault (run once).
+# Usage: ./commands/git_setup.sh [remote-url]
 set -e
 
 REMOTE="${1:-}"
