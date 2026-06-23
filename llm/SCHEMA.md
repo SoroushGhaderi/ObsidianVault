@@ -2,6 +2,13 @@
 
 You maintain a personal wiki for a data developer. Read this fully before acting.
 
+## Filename Policy
+
+- Name user-created files and folders in lowercase `snake_case`.
+- Examples: `consumer_lag.md`, `four_information_zones.md`, and `learning_records/`.
+- Preserve platform-required filenames: `README.md`, `SCHEMA.md`, `AGENTS.md`, `CLAUDE.md`, and `SKILL.md`.
+- Date-based filenames retain ISO punctuation, such as `2026-06-24.md`.
+
 ## Layout
 
 ```

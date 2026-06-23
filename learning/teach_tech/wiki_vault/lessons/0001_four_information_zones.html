@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 1 — Four Information Zones</title>
+  <style>
+    body { font: 17px/1.55 system-ui, sans-serif; max-width: 820px; margin: 3rem auto; padding: 0 1rem; color: #172033; }
+    h1, h2 { line-height: 1.2; } code { background: #eef2f7; padding: .1rem .3rem; border-radius: 4px; }
+    .card { border: 1px solid #d8deea; border-radius: 12px; padding: 1rem 1.25rem; margin: 1rem 0; }
+    details { margin-top: 1rem; } li { margin: .4rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Lesson 1: Four Information Zones</h1>
+  <p><strong>Goal:</strong> classify information correctly before asking an LLM to write anything.</p>
+
+  <div class="card">
+    <p><code>raw/</code> preserves evidence. <code>wiki/</code> stores durable synthesis.
+    <code>journal/</code> captures the human activity stream. <code>log/</code> records system operations.</p>
+  </div>
+
+  <h2>Worked example</h2>
+  <p>You read an article about Airflow sensors, then discover during work that a low
+  <code>poke_interval</code> caused load:</p>
+  <ul>
+    <li>The untouched article belongs in <code>raw/</code>.</li>
+    <li>The reusable sensor behavior belongs in <code>wiki/concepts/</code>.</li>
+    <li>The tool itself belongs in <code>wiki/entities/airflow.md</code>.</li>
+    <li>What happened today belongs in <code>journal/2026-06.md</code>.</li>
+    <li>The ingest operation belongs in <code>log/2026-06.md</code>.</li>
+  </ul>
+
+  <h2>Exercise</h2>
+  <p>Classify each item before opening the answer:</p>
+  <ol>
+    <li>An original PDF about Kafka consumer groups.</li>
+    <li>Your thought: “We may replace Kafka with Redpanda next quarter.”</li>
+    <li>A stable explanation of consumer lag.</li>
+    <li>“Codex created three pages from the Kafka PDF.”</li>
+    <li>The accepted choice to retain Kafka this year.</li>
+  </ol>
+
+  <details>
+    <summary>Answer key</summary>
+    <ol>
+      <li><code>raw/</code></li>
+      <li><code>journal/</code> until it becomes a deliberate decision</li>
+      <li><code>wiki/concepts/</code></li>
+      <li><code>log/</code></li>
+      <li><code>wiki/decisions.md</code></li>
+    </ol>
+  </details>
+
+  <h2>Try it in the terminal</h2>
+  <pre><code>cd /Users/soroush/Downloads/vault
+./commands/status.sh
+./commands/search.sh "Airflow" all</code></pre>
+
+  <p>Next lesson: ingest one real technical source and trace every page it creates.</p>
+</body>
+</html>
