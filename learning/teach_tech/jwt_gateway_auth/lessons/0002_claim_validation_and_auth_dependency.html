@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 0002: Claim Validation and Auth Dependency Design</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent: #7ee787;
+            --accent-2: #58a6ff;
+            --warning: #d29922;
+            --danger: #f85149;
+            --code-bg: #1c2128;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0 auto;
+            max-width: 860px;
+            padding: 2rem 1.5rem 3rem;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.65;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+        h1, h2, h3 { line-height: 1.25; }
+        h1 { font-size: 1.7rem; color: var(--accent-2); margin: 0 0 0.5rem; }
+        h2 { font-size: 1.2rem; margin: 2rem 0 0.75rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--border); }
+        h3 { font-size: 1.02rem; margin: 1.25rem 0 0.5rem; color: var(--text); }
+        p, ul, ol { margin: 0.6rem 0; }
+        ul, ol { padding-left: 1.4rem; }
+        li { margin: 0.35rem 0; }
+        .meta { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+        .goal, .callout, .exercise {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.15rem;
+            margin: 1rem 0;
+        }
+        .goal { border-left: 3px solid var(--accent); }
+        .callout.warning { border-left: 3px solid var(--warning); }
+        .callout.danger { border-left: 3px solid var(--danger); }
+        .callout.info { border-left: 3px solid var(--accent-2); }
+        pre {
+            margin: 0.75rem 0;
+            padding: 1rem;
+            overflow-x: auto;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.86rem;
+            line-height: 1.55;
+        }
+        code {
+            font-family: "SF Mono", "Fira Code", Consolas, monospace;
+            font-size: 0.95em;
+        }
+        :not(pre) > code {
+            padding: 0.12rem 0.35rem;
+            border-radius: 4px;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+        }
+        a { color: var(--accent-2); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .answer {
+            display: none;
+            margin-top: 0.85rem;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .answer.visible { display: block; }
+        button {
+            margin-top: 0.5rem;
+            padding: 0.45rem 0.8rem;
+            border: 0;
+            border-radius: 6px;
+            background: var(--accent-2);
+            color: var(--bg);
+            font-size: 0.88rem;
+            cursor: pointer;
+        }
+        .flow {
+            padding: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: "SF Mono", Consolas, monospace;
+            font-size: 0.84rem;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        .diagram {
+            display: grid;
+            gap: 0.7rem;
+            margin: 1rem 0;
+        }
+        .node {
+            background: linear-gradient(180deg, rgba(88,166,255,0.08), rgba(126,231,135,0.06));
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+        }
+        .node strong {
+            display: block;
+            margin-bottom: 0.25rem;
+            color: var(--accent-2);
+        }
+        .arrow {
+            text-align: center;
+            color: var(--text-muted);
+            font-family: "SF Mono", Consolas, monospace;
+            letter-spacing: 0.04em;
+        }
+    </style>
+</head>
+<body>
+<h1>Lesson 0002: Claim Validation and Auth Dependency Design</h1>
+<div class="meta">Topic: JWT Gateway Auth | Prerequisites: Lesson 0001, FastAPI dependencies, JWT basics</div>
+
+<div class="goal">
+    <strong>Goal:</strong> Make the backend auth dependency small, explicit, and safe by validating only what still matters after gateway verification.
+</div>
+
+<h2>Why This Lesson Exists</h2>
+<p>Lesson 0001 covered the happy path: the gateway validates the token, the backend extracts the identity, and HashIds convert the claim into a numeric user ID. The next question is more professional: what should the backend still validate, and what should it deliberately ignore?</p>
+
+<h2>The Design Principle</h2>
+<p>The backend should not reimplement gateway authentication, but it should still defend itself against malformed input, contract drift, and accidental misuse.</p>
+
+<div class="callout info">
+    <strong>Rule of thumb</strong>
+    Validate structure, required claims, and data shape. Do not turn the backend into a second auth gateway unless you actually need independent trust.
+</div>
+
+<h2>Auth Flow</h2>
+<div class="diagram" aria-label="Authentication flow diagram">
+    <div class="node">
+        <strong>Client request</strong>
+        Sends <code>Authorization: Bearer &lt;jwt&gt;</code> to the API.
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node">
+        <strong>Gateway</strong>
+        Verifies signature, issuer, audience, and expiry. This is the trust boundary.
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node">
+        <strong>Backend auth dependency</strong>
+        Checks header shape, decodes payload, requires <code>UserId</code>, decodes HashId, fails closed.
+    </div>
+    <div class="arrow">↓</div>
+    <div class="node">
+        <strong>Endpoint</strong>
+        Receives a clean <code>user_id</code> string and focuses on business logic only.
+    </div>
+</div>
+
+<div class="flow">Client → Gateway → Backend auth dependency → Endpoint
+       (token)   (verify)      (validate shape)      (business logic)</div>
+
+<h2>What the Backend Should Check</h2>
+<h3>1. Authorization Header Shape</h3>
+<p>The handler should reject missing or malformed bearer tokens immediately.</p>
+<pre><code>def extract_bearer_token(authorization: str | None) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header.")
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(status_code=401, detail="Invalid Authorization header.")
+
+    return token</code></pre>
+
+<h3>2. Payload Decoding Without Signature Verification</h3>
+<p>The backend can decode the payload to read claims, but it should not pretend this is full token verification.</p>
+<pre><code>def decode_unverified_jwt(token: str) -&gt; dict[str, object]:
+    try:
+        return jwt.decode(
+            token,
+            options={
+                "verify_signature": False,
+                "verify_exp": False,
+                "verify_aud": False,
+                "verify_iss": False,
+            },
+            algorithms=["HS256", "RS256"],
+        )
+    except jwt.PyJWTError as exc:
+        raise HTTPException(status_code=401, detail="Invalid JWT token.") from exc</code></pre>
+
+<h3>3. Required Claim Presence</h3>
+<p>The backend should require the identity claim it depends on. If that claim is missing, the request is invalid.</p>
+<pre><code>def get_required_claim(payload: dict[str, object], claim_name: str) -&gt; str:
+    value = payload.get(claim_name)
+    if not isinstance(value, str) or not value.strip():
+        raise HTTPException(status_code=401, detail=f"Missing or invalid {claim_name} claim.")
+    return value</code></pre>
+
+<h3>4. HashId Decoding</h3>
+<p>The encoded user identity is a transport format, not a privilege boundary. Decode it carefully and fail closed.</p>
+<pre><code>def decode_user_id(hash_id: str) -&gt; str:
+    decoded = _hashids.decode(hash_id)
+    if not decoded:
+        raise HTTPException(status_code=401, detail="Invalid UserId in token.")
+    return str(decoded[0])</code></pre>
+
+<h2>A Clean Dependency</h2>
+<pre><code>async def get_current_user_id(request: Request) -&gt; str:
+    token = extract_bearer_token(request.headers.get("authorization"))
+    payload = decode_unverified_jwt(token)
+    user_hash = get_required_claim(payload, "UserId")
+    return decode_user_id(user_hash)</code></pre>
+
+<p>This is usually the right shape for internal service auth:</p>
+<ul>
+    <li>One dependency owns the whole extraction path.</li>
+    <li>Endpoints depend on a plain `user_id` value.</li>
+    <li>Tests can override a single function instead of patching many internals.</li>
+</ul>
+
+<h2>What Not To Do</h2>
+<div class="callout danger">
+    <strong>Anti-pattern</strong>
+    Do not spread auth logic across multiple route handlers, and do not silently accept a missing claim just because the gateway usually sets it.
+</div>
+<pre><code># Bad: duplicated logic and weak failure handling
+auth = request.headers.get("authorization")
+if auth:
+    token = auth.split(" ")[1]
+    payload = jwt.decode(token, options={"verify_signature": False})
+    user_id = payload.get("UserId", "0")  # dangerous default
+</code></pre>
+
+<p>The dangerous part above is not just the missing signature check. It is the fallback to a default identity. In auth code, defaults can become impersonation bugs.</p>
+
+<h2>Testing Strategy</h2>
+<p>A good auth dependency is easy to test at the boundary.</p>
+<pre><code>def test_message_endpoint_with_authenticated_user(client, app):
+    from app.core.jwt_auth import get_current_user_id
+
+    app.dependency_overrides[get_current_user_id] = lambda: "10652"
+    try:
+        response = client.post("/message", json={"text": "hello"})
+        assert response.status_code == 200
+    finally:
+        app.dependency_overrides.pop(get_current_user_id, None)</code></pre>
+
+<p>That pattern keeps the test focused on business behavior instead of JWT plumbing.</p>
+
+<h2>Failure Modes to Watch</h2>
+<ul>
+    <li>Missing <code>Authorization</code> header.</li>
+    <li>Non-bearer tokens or malformed header values.</li>
+    <li>JWT payload missing the expected identity claim.</li>
+    <li>HashId configuration drift across services.</li>
+    <li>Accidental defaults that turn auth failures into valid identities.</li>
+</ul>
+
+<h2>Retrieval Exercise</h2>
+<div class="exercise">
+    <h3>Exercise 1: Decide What the Backend Owns</h3>
+    <p>For each item, decide whether the backend should validate it, trust it from the gateway, or ignore it:</p>
+    <ul>
+        <li><code>Authorization</code> header exists</li>
+        <li>JWT signature</li>
+        <li><code>UserId</code> claim exists</li>
+        <li><code>UserId</code> decodes to a number</li>
+        <li><code>exp</code> claim exists</li>
+    </ul>
+    <button onclick="this.nextElementSibling.classList.toggle('visible')">Show Answer</button>
+    <div class="answer">
+        <ul>
+            <li><code>Authorization</code> header exists: validate.</li>
+            <li>JWT signature: trust the gateway in this pattern.</li>
+            <li><code>UserId</code> claim exists: validate.</li>
+            <li><code>UserId</code> decodes to a number: validate.</li>
+            <li><code>exp</code> claim exists: usually trust the gateway, but backend may inspect it for defense in depth if required by policy.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="exercise">
+    <h3>Exercise 2: Spot the Bug</h3>
+    <p>Why is this code dangerous?</p>
+    <pre><code>user_id = payload.get("UserId", "000000")
+return str(_hashids.decode(user_id)[0])</code></pre>
+    <button onclick="this.nextElementSibling.classList.toggle('visible')">Show Answer</button>
+    <div class="answer">
+        <p>It silently accepts a missing claim and substitutes a fallback identity. If the request is malformed or malicious, the code may authenticate the wrong user instead of failing closed.</p>
+    </div>
+</div>
+
+<h2>Key Takeaways</h2>
+<ul>
+    <li>Gateway-trust removes duplicate signature verification, not all validation.</li>
+    <li>The backend should validate header shape, claim presence, and data shape.</li>
+    <li>Defaults in auth code are risky because they can become silent impersonation paths.</li>
+    <li>One dependency should own the auth path from header to user ID.</li>
+    <li>Tests should override the dependency, not re-create JWT mechanics in every test.</li>
+</ul>
+
+<h2>References</h2>
+<ul>
+    <li><a href="../../../../wiki/concepts/jwt_gateway_trust_pattern.md">JWT Gateway Trust Pattern</a></li>
+    <li><a href="../../../../wiki/concepts/jwt_glossary.md">JWT Glossary</a></li>
+    <li><a href="../../../../wiki/concepts/hashid_identity_pattern.md">HashId Identity Pattern</a></li>
+    <li><a href="../../../../wiki/concepts/fastapi_dependency_auth.md">FastAPI Dependency Auth</a></li>
+</ul>
+
+<p style="margin-top:2rem; color: var(--text-muted);">Next lesson could cover rotating HashIds safely or comparing this pattern with full JWT verification in zero-trust services.</p>
+
+<script>
+// Minimal interactive reveal for answers.
+</script>
+</body>
+</html>

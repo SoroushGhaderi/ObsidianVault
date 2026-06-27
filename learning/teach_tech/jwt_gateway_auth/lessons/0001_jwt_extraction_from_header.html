@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 0001: JWT Extraction from Authorization Header</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --red: #f85149;
+            --yellow: #d29922;
+            --code-bg: #1c2128;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        h1 { color: var(--accent); font-size: 1.5rem; margin-bottom: 0.5rem; }
+        h2 { color: var(--text); font-size: 1.15rem; margin-top: 2rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+        h3 { color: var(--text-muted); font-size: 1rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .goal {
+            background: var(--surface);
+            border-left: 3px solid var(--green);
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .goal strong { color: var(--green); }
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 0.75rem 0;
+        }
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85em;
+        }
+        :not(pre) > code {
+            background: var(--code-bg);
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+            border: 1px solid var(--border);
+        }
+        .callout {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+        }
+        .callout.warning { border-left: 3px solid var(--yellow); }
+        .callout.info { border-left: 3px solid var(--accent); }
+        .callout.danger { border-left: 3px solid var(--red); }
+        .callout strong { display: block; margin-bottom: 0.3rem; }
+        .exercise {
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            padding: 1.25rem;
+            margin: 1.5rem 0;
+        }
+        .exercise h3 { color: var(--accent); margin-top: 0; }
+        .answer {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 0.75rem;
+            display: none;
+        }
+        .answer.visible { display: block; }
+        button.toggle-answer {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        button.toggle-answer:hover { opacity: 0.9; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .meta { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.3rem 0; }
+        .flow-diagram {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem;
+            margin: 1rem 0;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.8;
+            white-space: pre;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Lesson 0001: JWT Extraction from Authorization Header</h1>
+<div class="meta">Topic: JWT Gateway Auth &nbsp;|&nbsp; Prerequisites: Python basics, HTTP headers</div>
+
+<div class="goal">
+    <strong>Goal:</strong> Extract a numeric user_id from a Bearer JWT token using the gateway-trust pattern.
+</div>
+
+<h2>The Problem</h2>
+<p>Your API gateway validates JWTs and forwards requests to your backend service. The backend needs the user's identity but should not re-verify the token. How do you extract a stable user identifier from the request?</p>
+
+<h2>Architecture: The Gateway-Trust Pattern</h2>
+
+<div class="flow-diagram">Client                    Gateway                  Backend Service
+  │                         │                         │
+  │── POST /api/chat ──────▶│                         │
+  │   Authorization: Bearer │                         │
+  │   eyJhbGciOi...        │                         │
+  │                         │── Validate JWT ────────▶│ (internal)
+  │                         │   signature, expiry,    │
+  │                         │   audience, issuer      │
+  │                         │                         │
+  │                         │── Forward request ─────▶│
+  │                         │   (original JWT intact) │
+  │                         │                         │
+  │                         │                    Decode payload
+  │                         │                    Extract UserId
+  │                         │                    Decode HashId → numeric
+  │                         │                         │
+  │◀── Response ───────────│◀── Response ─────────────│</div>
+
+<h2>Minimum Concepts</h2>
+
+<h3>1. JWT Structure</h3>
+<p>A JWT is three Base64url-encoded parts separated by dots:</p>
+<pre><code>eyJhbGciOiJIUzI1NiJ9.eyJVc2VySWQiOiI3NzEzZ2tuIn0.signature_here
+│   header            │  payload                        │  sig</code></pre>
+<p>The payload contains claims. In our case, <code>UserId</code> is a HashId string like <code>"7713gkn"</code>.</p>
+
+<h3>2. Bearer Token Extraction</h3>
+<p>The <code>Authorization</code> header format is <code>Bearer &lt;token&gt;</code>. You must split and validate the prefix:</p>
+<pre><code>authorization = request.headers.get("authorization")
+# "Bearer eyJhbGci..." → ["Bearer", "eyJhbGci..."]
+parts = authorization.split(" ", 1)
+token = parts[1]  # the raw JWT</code></pre>
+
+<h3>3. Decoding Without Verification</h3>
+<p>Since the gateway already verified the signature, you can decode with signature verification disabled. Keep any lightweight claim checks that still help with correctness:</p>
+<pre><code>import jwt
+
+payload = jwt.decode(
+    token,
+    options={
+        "verify_signature": False,
+        "verify_exp": False,
+        "verify_aud": False,
+        "verify_iss": False,
+    },
+    algorithms=["HS256", "RS256"],
+)
+# payload = {"UserId": "7713gkn", "Type": "Customer", ...}</code></pre>
+
+<h3>4. HashId Decoding</h3>
+<p>The <code>UserId</code> claim is a HashId — a reversible encoding of a numeric ID:</p>
+<pre><code>from hashids import Hashids
+
+hashids = Hashids(
+    salt="your-salt-here",
+    min_length=6,
+    alphabet="abdfghklmnoprstwxyz123456789",
+)
+
+user_hash = payload["UserId"]  # "7713gkn"
+decoded = hashids.decode(user_hash)  # (10652,)
+user_id = str(decoded[0])  # "10652"</code></pre>
+
+<h2>Worked Example: Complete FastAPI Integration</h2>
+
+<pre><code># app/core/jwt_auth.py
+from fastapi import HTTPException, Request, status
+import jwt
+from hashids import Hashids
+from app.core.config import settings
+
+_hashids = Hashids(
+    salt=settings.HASHIDS_SALT,
+    min_length=settings.HASHIDS_MIN_LENGTH,
+    alphabet=settings.HASHIDS_ALPHABET,
+)
+
+def extract_user_id_from_request(request: Request) -> str:
+    # 1. Extract Bearer token
+    auth = request.headers.get("authorization")
+    if not auth:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Authorization header.")
+    parts = auth.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Authorization format.")
+
+    # 2. Decode JWT (no signature check — gateway handled it)
+    try:
+        payload = jwt.decode(
+            parts[1],
+            options={"verify_signature": False, "verify_exp": False,
+                     "verify_aud": False, "verify_iss": False},
+            algorithms=["HS256", "RS256"],
+        )
+    except jwt.PyJWTError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid JWT token.") from exc
+
+    # 3. Extract and decode HashId
+    hash_id = payload.get("UserId")
+    if not hash_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="UserId claim not found.")
+
+    decoded = _hashids.decode(hash_id)
+    if not decoded:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid UserId in token.")
+
+    return str(decoded[0])</code></pre>
+
+<pre><code># app/api/v1/endpoints/chat.py
+from fastapi import Depends, Request
+from app.core.jwt_auth import extract_user_id_from_request
+
+async def get_current_user_id(request: Request) -> str:
+    return extract_user_id_from_request(request)
+
+@router.post("/message")
+async def handle_message(
+    request: MessageRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    # user_id = "10652" — ready to use
+    ...</code></pre>
+
+<h2>Retrieval Exercise</h2>
+
+<div class="exercise">
+    <h3>Exercise 1: Trace the Data Flow</h3>
+    <p>Given this JWT payload:</p>
+    <pre><code>{"UserId": "7713gkn", "Type": "Customer", "exp": 1782555915}</code></pre>
+    <p>And this HashIds config:</p>
+    <pre><code>salt = "ecawiasqrpqrgyhwnolrudpbsrwaynbqdayndnmcehjnwqyouikpodzaqxivwkconwqbhrmxfgccbxbyljguwlxhdlcvxlutbnwjlgpfhjgqbegtbxbvwnacyqnltrby"
+min_length = 6
+alphabet = "abdfghklmnoprstwxyz123456789"</code></pre>
+    <p>What numeric user_id does the backend use? What happens if the salt is wrong?</p>
+    <button class="toggle-answer" onclick="this.nextElementSibling.classList.toggle('visible')">Show Answer</button>
+    <div class="answer">
+        <p><strong>user_id = 10652</strong></p>
+        <p>If the salt is wrong, <code>hashids.decode("7713gkn")</code> returns an empty tuple, and the backend raises <code>401: Invalid UserId in token</code>. The HashId must be decoded with the exact same salt, min_length, and alphabet used to encode it.</p>
+    </div>
+</div>
+
+<div class="exercise">
+    <h3>Exercise 2: Security Analysis</h3>
+    <p>This pattern skips JWT signature verification. Answer:</p>
+    <ol>
+        <li>What attacker could exploit this?</li>
+        <li>What prevents the attack?</li>
+        <li>When would this pattern be unsafe?</li>
+    </ol>
+    <button class="toggle-answer" onclick="this.nextElementSibling.classList.toggle('visible')">Show Answer</button>
+    <div class="answer">
+        <ol>
+            <li>An attacker with network access could craft a JWT with any <code>UserId</code> and send it directly to the backend, impersonating any customer.</li>
+            <li>Network-level controls: the backend only accepts traffic from the gateway (VPC rules, service mesh, firewall). The attacker can't reach the backend directly.</li>
+            <li>Unsafe when: the backend is publicly reachable, no network isolation exists, or the gateway doesn't validate tokens (double-submit pattern without verification).</li>
+        </ol>
+    </div>
+</div>
+
+<div class="exercise">
+    <h3>Exercise 3: Design Decision</h3>
+    <p>Your team is building a new microservice. The gateway validates JWTs. Should the service:</p>
+    <ul>
+        <li><strong>A</strong>: Skip JWT verification (gateway-trust pattern)</li>
+        <li><strong>B</strong>: Verify JWT signature with shared JWKS endpoint</li>
+        <li><strong>C</strong>: Verify JWT signature with hardcoded secret</li>
+    </ul>
+    <p>Rank by: development speed, security, operational complexity. Which do you choose and why?</p>
+    <button class="toggle-answer" onclick="this.nextElementSibling.classList.toggle('visible')">Show Answer</button>
+    <div class="answer">
+        <p><strong>A (Gateway-trust)</strong>: Fastest dev, lowest ops complexity, acceptable security for internal services behind gateway.</p>
+        <p><strong>B (JWKS verification)</strong>: Highest security, moderate ops (must manage JWKS endpoint), slower dev. Best for zero-trust or public-facing.</p>
+        <p><strong>C (Hardcoded secret)</strong>: Avoid. Secret rotation requires redeployment. Worse than A or B in every dimension.</p>
+        <p><strong>Recommendation:</strong> A for internal services behind gateway. B if moving to zero-trust. Never C.</p>
+    </div>
+</div>
+
+<h2>Key Takeaways</h2>
+<ul>
+    <li>The <code>Authorization: Bearer &lt;token&gt;</code> header carries the JWT.</li>
+    <li>Gateway-trust pattern: decode JWT without signature verification.</li>
+    <li>HashIds are reversible encodings, not encryption — anyone with the salt can decode.</li>
+    <li>FastAPI <code>Depends()</code> centralizes auth logic and makes testing easy.</li>
+    <li>Security relies on network boundary, not cryptographic verification.</li>
+    <li>Keep the backend dependency small, explicit, and easy to test.</li>
+</ul>
+
+<h2>References</h2>
+<ul>
+    <li>Concept: <a href="../../../../wiki/concepts/jwt_gateway_trust_pattern.md">JWT Gateway Trust Pattern</a></li>
+    <li>Concept: <a href="../../../../wiki/concepts/jwt_glossary.md">JWT Glossary</a></li>
+    <li>Concept: <a href="../../../../wiki/concepts/hashid_identity_pattern.md">HashId Identity Pattern</a></li>
+    <li>Concept: <a href="../../../../wiki/concepts/fastapi_dependency_auth.md">FastAPI Dependency Auth</a></li>
+    <li>Source: <a href="https://pyjwt.readthedocs.io/">PyJWT Documentation</a></li>
+    <li>Source: <a href="https://hashids.org/python/">HashIds Python Documentation</a></li>
+</ul>
+
+<p style="margin-top:2rem; color: var(--text-muted);">Questions? Ask about any part — I can create follow-up lessons on JWT security, HashId rotation, or testing patterns.</p>
+
+<script>
+// Answers are toggled by the buttons above — no external dependencies needed.
+</script>
+</body>
+</html>
